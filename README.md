@@ -53,14 +53,14 @@ Every training is run with a different seed for the random number generator, thi
 ```python
 settings = {
     "batch_size" : int(answers["batch"]),
-    "epochs" : int(answers["epoch"]),
     "learning_rate": float(answers["rate"]),
-    "dataframe" : "datasets/"+dataset+"/"+dataset+"/"+dataset+"_dataframe.csv",
-    "path" : "datasets/"+dataset+'/'+dataset+'/',
     "model_type" : answers["model"],
-    "seed" : int(datetime.now().timestamp()), #Here goes your personal seed
+    "seed" : int(datetime.now().timestamp()), #Set the seed here
     "save_rate" : int(answers["save_rate"]),
-    "pretrained" : answers["pretrained"]
+    "pretrained" : answers["pretrained"],
+    "dataframe" : "datasets/"+datasets[0]+"/"+datasets[0]+"/"+datasets[0]+"_dataframe.csv",
+    "path": "datasets/"+datasets[0]+'/'+datasets[0]+'/',
+    "epochs" : int(epochs[0])
 }
 ```
 
