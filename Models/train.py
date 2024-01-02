@@ -10,6 +10,7 @@ import torch
 from torch.utils.data import DataLoader
 from comet_ml.integration.pytorch import log_model
 from datetime import datetime
+device = get_device()
 
 try:
     with open("api.key") as f:
@@ -22,8 +23,12 @@ for dataset_name in os.listdir("datasets"):
         datasets.append(dataset_name)
 if not datasets:
     raise FileNotFoundError("No dataset found")
-
+questions = create_questions(device)
 answers = inquirer.prompt(questions, raise_keyboard_interrupt=True)
+#Set CPU workers if not on GPU
+if answers["workers"] == None:
+    answers["workers"] = 0
+
 datasets_questions = []
 for n in range(int(answers["dataset_n"])):
     datasets_questions.extend([inquirer.List(f'datasert_{n}', message=f'Choose dataset {n}', choices= datasets),
@@ -38,7 +43,7 @@ for n, (key, item) in enumerate(datasets_epochs.items()):
     else:
         datasets.append(item)
 
-device = get_device()
+
 #Settings
 min_size = 300
 max_size = 500
@@ -127,14 +132,14 @@ for i, dataset in enumerate(datasets):
         train_dataset,
         batch_size=settings["batch_size"],
         shuffle=True,
-        num_workers=4,
+        num_workers=int(answers["workers"]),
         collate_fn=collate_fn
     )
     valid_data_loader = DataLoader(
         valid_dataset,
         batch_size=settings["batch_size"],
         shuffle=False,
-        num_workers=4,
+        num_workers=int(answers["workers"]),
         collate_fn=collate_fn
     )
 

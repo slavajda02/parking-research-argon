@@ -36,7 +36,7 @@ Alternatively, you can create and activate the conda enviroment:
 
 ```bash
 conda env create -f environment.yml
-conda activate parking_research
+conda activate parking-research
 ```
 
 The trainig script is setup to log information to [Comet](comet.com).
