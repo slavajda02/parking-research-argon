@@ -6,7 +6,7 @@ This repo originated as a fork of a repository from [*''Revising deep learning m
 The authors are:
 Anastasia Martynova, [Mikhail Kuznetsov](https://github.com/mmkuznecov), [Vadim Porvatov](https://www.researchgate.net/profile/Vadim-Porvatov), Vladislav Tishin, [Natalia Semenova](https://www.researchgate.net/profile/Natalia-Semenova-7).
 
-And their repo is: [parking-reeach](https://github.com/Eighonet/parking-research)
+And their repo is: [parking-reseach](https://github.com/Eighonet/parking-research)
 
 The original goal of this fork is to port the tools to newest python libraries and to serve as a personal playground  for the work. But after a lot of changes and modifications to the code. It is now used as a proof of concept to the final work.
 
@@ -39,7 +39,7 @@ conda env create -f environment.yml
 conda activate parking-research
 ```
 
-The trainig script is setup to log information to [Comet](comet.com).
+The trainig script is setup to log information to [Comet](https://comet.com).
 The training script looks for an `pi.key`` file containing a key that you can obtain in your user settings after registering.
 
 # Training
