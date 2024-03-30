@@ -15,24 +15,24 @@ import inquirer
 # parser.add_argument("--timeit", type=bool, help="Time one inference")
 
 questions = [
-    
+
     inquirer.Confirm('pretrained', message = "Using a pretrained model?", default=False),
     inquirer.List('model',
                   message="What model type?",
                   choices = ["faster_rcnn_mobilenet", "faster_rcnn_mobilenetV3_Large", "faster_rcnn_mobilenetV3_Small", "faster_rcnn_resnet", "faster_rcnn_vgg", "retinanet_mobilenet", "retinanet_resnet", "retinanet_vgg", "retinanet_mobilenetV3_Small", "retinanet_mobilenetV3_Large"],
                   ignore = lambda x: x["pretrained"] == True),
-    
+
     inquirer.List('model',
                   message="What model do type?",
                   choices = ["faster_rcnn_mobilenetV3_Large", "faster_rcnn_resnet", "retinanet_resnet"],
                   ignore = lambda x: x["pretrained"] == False),
-    
+
     inquirer.Path('path',
                  message="Path to a model to test",
                  path_type=inquirer.Path.FILE,
                  exists = True
                 ),
-    
+
     inquirer.Text('dataset',
                   message="What dataset to use for testing?"),
     inquirer.Confirm('timeit', message = "Show inference time?", default=True),
@@ -46,7 +46,7 @@ device = get_device()
 dataset = answers["dataset"]
 
 dataset_path = os.path.join("datasets/"+dataset, dataset)
-#Get wanted model from inter models 
+#Get wanted model from inter models
 if answers["model"] == 'faster_rcnn_mobilenet':
     model = get_model(faster_rcnn_mobilenet_params, answers["pretrained"])
 elif answers["model"] == 'faster_rcnn_mobilenetV3_Large':
@@ -81,6 +81,9 @@ test_df = get_testDataframe(dataframe)
 
 # dataloaders
 test_dataset = ParkDataset(test_df, DIR_TEST, get_valid_transform())
+
+#TODO: You need to figure out how to count False Negatives, propably change the
+#dataset loader to include total number of parking spaces, not only occupied
 
 # Make a testing DataLoader
 test_data_loader = DataLoader(

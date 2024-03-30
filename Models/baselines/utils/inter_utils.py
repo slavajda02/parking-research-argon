@@ -26,7 +26,7 @@ import time
 #     parser.add_argument('--saveRate', type=int, help="Save every x epochs", default = 20)
 #     parser.add_argument('-t', '--pretrained', type=bool, help="Load model with pretrained weights")
 #     parser.add_argument('-w', '--warmup', type=bool, help="Use warming up scheduler for the first epoch (recommended when training on a new dataset)")
-    
+
 #     args = parser.parse_args()
 #     return args
 
@@ -38,29 +38,29 @@ class ParkDataset(Dataset):
         self.df = dataframe
         self.image_dir = image_dir
         self.transforms = transforms
-        
+
     def __getitem__(self, index: int):
 
         image_id = self.image_ids[index]
         records = self.df[self.df['image_id'] == image_id]
-        
+
         image = cv2.imread(f"{self.image_dir}/{image_id}", cv2.IMREAD_COLOR).astype(np.float32)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
         image /= 255.0
-    
+
         boxes = records[['x', 'y', 'w', 'h']].values
         boxes[:, 2] = boxes[:, 0] + boxes[:, 2]
         boxes[:, 3] = boxes[:, 1] + boxes[:, 3]
-        
+
         area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
         area = torch.as_tensor(area, dtype=torch.float32)
 
         # there is only one class
         labels = torch.ones((records.shape[0],), dtype=torch.int64)
-        
+
         # suppose all instances are not crowd
         iscrowd = torch.zeros((records.shape[0],), dtype=torch.int64)
-        
+
         target = {}
         target['boxes'] = boxes
         target['labels'] = labels
@@ -146,7 +146,7 @@ def reduce_dict(input_dict, average=True):
 def get_train_transform(add_augmentations=False, augmentation_list=[]):
     if add_augmentations:
         return A.Compose(augmentation_list, bbox_params={'format': 'pascal_voc', 'label_fields': ['labels']})
-    
+
     return A.Compose([ToTensorV2(p=1.0)], bbox_params={'format': 'pascal_voc', 'label_fields': ['labels']})
 
 def get_valid_transform():
@@ -169,7 +169,7 @@ def get_dataframes(original_dataframe):
     original_dataframe['y'] = -1
     original_dataframe['w'] = -1
     original_dataframe['h'] = -1
-    
+
     original_dataframe[['x', 'y', 'w', 'h']] = np.stack(original_dataframe['bbox'].apply(lambda x: expand_bbox(x)))
     original_dataframe.drop(columns=['bbox'], inplace=True)
     original_dataframe['x'] = original_dataframe['x'].astype(float)
@@ -180,7 +180,7 @@ def get_dataframes(original_dataframe):
     train_df = original_dataframe[original_dataframe['folder'] == 'train']
     valid_df = original_dataframe[original_dataframe['folder'] == 'val']
     test_df = original_dataframe[original_dataframe['folder'] == 'test']
-    
+
     return train_df, valid_df
 
 def get_testDataframe(original_dataframe):
@@ -189,7 +189,7 @@ def get_testDataframe(original_dataframe):
     original_dataframe['y'] = -1
     original_dataframe['w'] = -1
     original_dataframe['h'] = -1
-    
+
     original_dataframe[['x', 'y', 'w', 'h']] = np.stack(original_dataframe['bbox'].apply(lambda x: expand_bbox(x)))
     original_dataframe.drop(columns=['bbox'], inplace=True)
     original_dataframe['x'] = original_dataframe['x'].astype(float)
@@ -198,7 +198,7 @@ def get_testDataframe(original_dataframe):
     original_dataframe['h'] = original_dataframe['h'].astype(float)
 
     test_df = original_dataframe[original_dataframe['folder'] == 'test']
-    
+
     return test_df
 
 def train_inter_model(model, num_epochs, train_data_loader, valid_data_loader, device, experiment, settings, optimizer, scheduler = 0, warmup = True):
@@ -210,7 +210,7 @@ def train_inter_model(model, num_epochs, train_data_loader, valid_data_loader, d
     loss_hist_val = Averager()
     min_loss = -np.inf
     name = experiment.get_name()
-    
+
     #Creating saving directory
     if "Saved_Models" not in os.listdir():
         os.mkdir('Saved_Models')
@@ -221,7 +221,7 @@ def train_inter_model(model, num_epochs, train_data_loader, valid_data_loader, d
         loss_hist.reset() #Resets to average just one epoch
         train_loop = tqdm(train_data_loader) #Init progress bar
         train_loop.set_description(f"Epoch [{epoch}/{num_epochs-1}]")
-        
+
         #Learning rate scheduler for first epoch
         if epoch == 0 and warmup:
             warmup_lr = 1.0 / 1000
@@ -229,9 +229,9 @@ def train_inter_model(model, num_epochs, train_data_loader, valid_data_loader, d
             warmup_scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=warmup_lr, total_iters= warmup_iters)
         else:
             warmup_scheduler = 0
-        
+
         for images, targets, image_ids in train_loop:
-            
+
             #Send image to device (would cause problem if it were missing on GPU)
             images = list(image.to(device) for image in images)
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
@@ -239,11 +239,11 @@ def train_inter_model(model, num_epochs, train_data_loader, valid_data_loader, d
             loss_dict = model(images, targets)
 
             losses = sum(loss for loss in loss_dict.values())
-            
+
             loss_dict_reduced = reduce_dict(loss_dict)
             losses_reduced = sum(loss for loss in loss_dict_reduced.values())
             loss_value = losses_reduced.item()
-            
+
             experiment.log_metric("training batch loss", loss_value, step = itr)
             loss_hist.send(loss_value)
 
@@ -254,7 +254,7 @@ def train_inter_model(model, num_epochs, train_data_loader, valid_data_loader, d
                 warmup_scheduler.step()
             train_loop.set_postfix(train_loss = loss_hist.value)
             itr += 1
-        
+
         ##Validation
         valid_loop = tqdm(valid_data_loader)
         valid_loop.set_description(f"Epoch [{epoch}/{num_epochs-1}]")
@@ -263,40 +263,40 @@ def train_inter_model(model, num_epochs, train_data_loader, valid_data_loader, d
             for val_images, val_targets, val_image_ids in valid_loop:
                 # if itr_val == 1:
                 #     for n, img in enumerate(val_images):
-                #         experiment.log_image(img, name = "Epoch {}, image {} in valid batch {}".format(epoch, n, itr_val), annotations = val_targets[n])   
+                #         experiment.log_image(img, name = "Epoch {}, image {} in valid batch {}".format(epoch, n, itr_val), annotations = val_targets[n])
                 # itr_val += 1
-                
+
                 #Send image to device (would cause problem if it were missing on GPU)
                 val_images = list(val_image.to(device) for val_image in val_images)
                 val_targets = [{val_k: val_v.to(device) for val_k, val_v in val_t.items()} for val_t in val_targets]
 
-                val_loss_dict = model(val_images, val_targets)  
+                val_loss_dict = model(val_images, val_targets)
 
                 val_losses = sum(val_loss for val_loss in val_loss_dict.values())
-                
+
                 val_loss_dict_reduced = reduce_dict(val_loss_dict)
                 val_losses_reduced = sum(loss for loss in val_loss_dict_reduced.values())
                 val_loss_value = val_losses_reduced.item()
-                
+
                 experiment.log_metric("validation batch loss", val_loss_value, step = itr_val)
                 loss_hist_val.send(val_loss_value)
                 #Progress bar
                 valid_loop.set_postfix(valid_loss = loss_hist_val.value)
                 itr_val += 1
-                
+
         experiment.log_metric("epoch average loss", loss_hist.value, epoch = epoch)
         experiment.log_metric("epoch average validation loss", loss_hist_val.value, epoch = epoch)
         experiment.log_epoch_end(epoch)
         experiment.log_metric("optim learning rate", optimizer.param_groups[0]["lr"], epoch = epoch)
         if scheduler:
             scheduler.step() # Stepping the scheduler to next epoch
-          
+
         #Save every x epochs localy
         if save_epoch == settings["save_rate"]:
             torch.save(model.state_dict(), os.path.join('Saved_Models/'+ name, 'state_dict_'+str(epoch)+'.pth'))
             save_epoch = 0
         save_epoch +=1
-        
+
     #Save after finishing training
     torch.save(model.state_dict(), os.path.join('Saved_Models/'+name,'state_dict_final'+'.pth')) ##Final save
 
@@ -334,16 +334,16 @@ def test_model(model, device, data_loader, treshold = 0.9, plot = 0, save = Fals
         if timeit and n == 1:
             toc = time.perf_counter()
             t_measured = toc-tic
-        
+
         #Extracting targets and images
         image = images[0].detach().permute(1,2,0).numpy()
         target = targets[0]
         image_id = image_ids[0]
         boxes = [[(x[0], x[1]), (x[2], x[3])] for x in list(target["boxes"].detach().numpy())]
-        
+
         boxes_dict, points_dict, acc = calculate_acc(boxes, pred_boxes)
         accuracy_list.append(acc)
-        
+
         if plot:
             if pic_count == plot:
                 image = draw_to_image(image, boxes_dict, points_dict)
@@ -366,35 +366,46 @@ def test_model(model, device, data_loader, treshold = 0.9, plot = 0, save = Fals
 def calculate_acc(targets, predicted):
     results = {}
     results["boxes"] = []
-    results["labels"] = [False] * len(targets)
+    results["TP_labels"] = [False] * len(targets)
     points = {}
     points["points"] = []
-    points["labels"] = []
-    
+    points["FP_labels"] = []
+
     for box in predicted:
         points["points"].append((int((box[0][0]+box[1][0])/2), int((box[0][1]+box[1][1])/2)))
-        points["labels"].append(False)
-        
+        #Appending all points as bad detections
+        #False positive (Detects parked car where one is not)
+        #False negative (Missed parked car)
+        points["FP_labels"].append(True)
+        points["FN_labels"].append(True)
+        points["TP_labels"].append(False)
+
     for n, box in enumerate(targets):
         results['boxes'].append(box)
         for i, point in enumerate(points["points"]):
             if in_box(point, box):
-                results["labels"][n] = True
-                points["labels"][i] = True
-    
-    acc = results["labels"].count(True) / (len(targets)+points["labels"].count(False))
+                results["TP_labels"][n] = True
+                points["TP_labels"][i] = True
+                point["FP_labels"][i] = False
+                points["FN_labels"][i] = False
+
+    TP = results["TP_labels"].count(True)
+    FP = points["FP_labels"].count(False)
+
+    #acc = results["TP_labels"].count(True) / (len(targets)+points["labels"].count(False))
+    acc = TP / (TP+FP)
     return results, points, acc
 
 def draw_to_image(image, box_dict, dot_dict):
 #Plot targets
     for n, x in enumerate(box_dict["boxes"]):
-        if box_dict["labels"][n]:
+        if box_dict["TP_labels"][n]:
             cv2.rectangle(image, (int(x[0][0]),int(x[0][1])), (int(x[1][0]),int(x[1][1])), color=(0, 255, 0), thickness=2)
         else:
             cv2.rectangle(image, (int(x[0][0]),int(x[0][1])), (int(x[1][0]),int(x[1][1])), color=(255, 0, 0), thickness=2)
-            
+
     for n, point in enumerate(dot_dict["points"]):
-        if dot_dict["labels"][n]:
+        if dot_dict["TP_labels"][n]:
             cv2.circle(image, point, 10, (0,255,0), -1)
         else:
             cv2.circle(image, point, 10, (255,0,0), -1)
@@ -405,7 +416,7 @@ def in_box(point, box):
     if (((point[0] > box[0][0]) and (point[0] < box[1][0])) and ((point[1] > box[0][1]) and (point[1] < box[1][1]))):
         return True
     else:
-        False
+        return False
 #Load an existin model dict
 def load_model(model, device, path):
     if device.type == 'cpu':
