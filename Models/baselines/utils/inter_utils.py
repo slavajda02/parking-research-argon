@@ -323,7 +323,7 @@ def show_from_dataset(n, train_data_loader):
 def test_model(model, device, data_loader, treshold = 0.9, plot = 0, save = False, timeit = False):
     model.eval()
     pic_count = 1
-    accuracy_list = []
+    TP_total, FN_total, FP_total = 0,0,0
     loop = tqdm(data_loader)
     t_measured = 0
     n = 0
@@ -341,8 +341,8 @@ def test_model(model, device, data_loader, treshold = 0.9, plot = 0, save = Fals
         image_id = image_ids[0]
         boxes = [[(x[0], x[1]), (x[2], x[3])] for x in list(target["boxes"].detach().numpy())]
 
-        boxes_dict, points_dict, acc = calculate_acc(boxes, pred_boxes)
-        accuracy_list.append(acc)
+        boxes_dict, points_dict, TP, FN, FP  = calculate_acc(boxes, pred_boxes)
+        TP_total, FN_total, FP_total = TP_total+TP, FN_total+FN, FP_total+FP
 
         if plot:
             if pic_count == plot:
@@ -361,51 +361,48 @@ def test_model(model, device, data_loader, treshold = 0.9, plot = 0, save = Fals
         n += 1
     if timeit:
         print(f"Time of one inference: {t_measured:0.4f} s")
-    return accuracy_list
+    return TP_total, FN_total, FP_total
 
 def calculate_acc(targets, predicted):
     results = {}
     results["boxes"] = []
-    results["TP_labels"] = [False] * len(targets)
+    results["TP"] = [False] * len(targets)
+    results["FN"] = [True] * len(targets)
+
     points = {}
     points["points"] = []
-    points["FP_labels"] = []
-
+    points["FP"] = []
     for box in predicted:
         points["points"].append((int((box[0][0]+box[1][0])/2), int((box[0][1]+box[1][1])/2)))
         #Appending all points as bad detections
         #False positive (Detects parked car where one is not)
         #False negative (Missed parked car)
-        points["FP_labels"].append(True)
-        points["FN_labels"].append(True)
-        points["TP_labels"].append(False)
+        points["FP"].append(True)
 
     for n, box in enumerate(targets):
         results['boxes'].append(box)
         for i, point in enumerate(points["points"]):
             if in_box(point, box):
-                results["TP_labels"][n] = True
-                points["TP_labels"][i] = True
-                point["FP_labels"][i] = False
-                points["FN_labels"][i] = False
+                results["TP"][n] = True
+                results["FN"][n] = False
+                points["FP"][i] = False
 
-    TP = results["TP_labels"].count(True)
-    FP = points["FP_labels"].count(False)
+    TP = results["TP"].count(True)
+    FN = results["FN"].count(True)
+    FP = points["FP"].count(True)
 
-    #acc = results["TP_labels"].count(True) / (len(targets)+points["labels"].count(False))
-    acc = TP / (TP+FP)
-    return results, points, acc
+    return results, points, TP, FN, FP
 
 def draw_to_image(image, box_dict, dot_dict):
 #Plot targets
     for n, x in enumerate(box_dict["boxes"]):
-        if box_dict["TP_labels"][n]:
+        if box_dict["TP"][n]:
             cv2.rectangle(image, (int(x[0][0]),int(x[0][1])), (int(x[1][0]),int(x[1][1])), color=(0, 255, 0), thickness=2)
         else:
             cv2.rectangle(image, (int(x[0][0]),int(x[0][1])), (int(x[1][0]),int(x[1][1])), color=(255, 0, 0), thickness=2)
 
     for n, point in enumerate(dot_dict["points"]):
-        if dot_dict["TP_labels"][n]:
+        if not dot_dict["FP"][n]:
             cv2.circle(image, point, 10, (0,255,0), -1)
         else:
             cv2.circle(image, point, 10, (255,0,0), -1)

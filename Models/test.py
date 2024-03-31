@@ -90,10 +90,14 @@ test_data_loader = DataLoader(
     test_dataset,
     batch_size= 1,
     shuffle=False,
-    num_workers=4,
+    #num_workers=1,
     collate_fn=collate_fn
 )
 #show_from_dataset(2, test_data_loader)
-acc_list = test_model(model, device, test_data_loader, 0.85, save=answers["save"], timeit=answers["timeit"])
-avg_acc = sum(acc_list) / len(acc_list)
-print("Average accuracy on test dataset: %0.2f %%" %(avg_acc*100))
+TP, FN, FP = test_model(model, device, test_data_loader, 0.85, save=answers["save"], timeit=answers["timeit"])
+PREC = TP / (TP+FP)
+RECALL = TP / (TP+FN)
+F1 = (2*PREC*RECALL) / (PREC + RECALL)
+print("Average accuracy on test dataset: %0.3f " %(PREC))
+print("Average recall on test dataset: %0.3f " %(RECALL))
+print("F1 score: %0.3f " %(F1))
