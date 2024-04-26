@@ -6,6 +6,7 @@ import cv2
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from tqdm import tqdm
 
 from ipywidgets import widgets, Dropdown, Box, Label, HBox, VBox
 
@@ -24,6 +25,7 @@ def pa_widget(markup_dir = "Downloads/parking", output_dir = ""):
             self.annotation_dict = dict()
             self.image = ""
             self.img = []
+            self.clipboard = []
 
         def mouse_click(self, event):
             if not event.inaxes:
@@ -65,6 +67,12 @@ def pa_widget(markup_dir = "Downloads/parking", output_dir = ""):
         if path.value not in metadata:
             metadata[path.value] = img.shape
         return img
+    
+    def format_image(path):
+        img = cv2.imread(path)
+        if img.shape != (1080, 1920, 3):
+            img = cv2.resize(img, (1920, 1080))
+            cv2.imwrite(path, img)
     
     #Shows next image
     def forward_button_clicked(b):
@@ -129,6 +137,41 @@ def pa_widget(markup_dir = "Downloads/parking", output_dir = ""):
                     line = Line2D([xdata[j-1], xdata[j]], [ydata[j-1], ydata[j]])
                     line.set_color('r')
                     annotator.axes.add_line(line)
+                    
+    def copy_button_clicked(b):
+        annotator.clipboard = annotator.annotation_dict[annotator.image]
+    
+    def paste_button_clicked(b):
+        path.value = images[int(selected_image.value)]
+        dropdown.value = path.value
+        if path.value not in annotator.annotation_dict:
+            annotator.annotation_dict[path.value], annotator.image = [], path.value
+        else:
+            annotator.image = path.value
+        
+        #Pasting from program clipboard
+        annotator.annotation_dict[annotator.image] = annotator.clipboard
+
+        axes.clear()
+        annotator.xdata, annotator.ydata = [], []
+        for i in range(len(annotator.axes.lines)):
+            annotator.axes.lines[0].remove()
+            
+        annotator.img = load_image(path)
+        axes.imshow(annotator.img)
+        plt.axis("off")
+
+        shapes = annotator.annotation_dict[path.value]
+        xdata, ydata = [], []
+        for i in range(len(shapes)):
+            xdata = shapes[i][0].copy()
+            xdata.append(shapes[i][0][0])
+            ydata = shapes[i][1].copy()
+            ydata.append(shapes[i][1][0])
+            for j in range(1, len(xdata)):
+                line = Line2D([xdata[j-1], xdata[j]], [ydata[j-1], ydata[j]])
+                line.set_color('r')
+                annotator.axes.add_line(line)
     
     #Enables label painting with am annotation_flag
     def paint_button_clicked(b):
@@ -152,6 +195,13 @@ def pa_widget(markup_dir = "Downloads/parking", output_dir = ""):
                 while(len(annotator.axes.lines) % 4 != 0):
                     annotator.axes.lines[-1].remove()
             axes.imshow(annotator.img)
+            
+    def wipe_button_clicked(b):
+        axes.clear()
+        annotator.xdata, annotator.ydata = [], []
+        annotator.annotation_dict[annotator.image] = []
+        axes.imshow(annotator.img)
+        plt.axis("off")
 
     def download_button_clicked(b):    
         with open(output_dir + "annotations.json", "w") as outfile:
@@ -197,11 +247,14 @@ def pa_widget(markup_dir = "Downloads/parking", output_dir = ""):
 
     selected_image = widgets.Label(value='0')
     path = widgets.Label(value=images[int(selected_image.value)])
-
     annotatation_flag = widgets.Label(value='0')
 
+    #Image resizing
+    print("Resizing images to 1920x1080")
+    for img_name in tqdm(images):
+        format_image(markup_dir + '/' + img_name)
+
     img = load_image(path)
-        
     fig, axes = plt.subplots(figsize=[16,9], num='Markup widget rev2')
     axes.imshow(img)
     plt.axis("off")
@@ -209,6 +262,7 @@ def pa_widget(markup_dir = "Downloads/parking", output_dir = ""):
 
     annotator = Annotator(axes)
     annotator.annotation_dict[path.value], annotator.image = [], path.value
+    annotator.img = load_image(path)
 
     fig.canvas.mpl_connect('button_press_event', annotator.mouse_click)
 
@@ -216,19 +270,25 @@ def pa_widget(markup_dir = "Downloads/parking", output_dir = ""):
     button_trash = widgets.Button(description="Delete", layout={'width': '60px'})
     button_download = widgets.Button(description="Save", layout={'width': '60px'})
     button_apply_to_all = widgets.Button(description="Apply to all")
+    button_wipe = widgets.Button(description = "Wipe", layout={'width': '60px'})
+    button_copy = widgets.Button(description = "Copy", layout={'width': '60px'})
+    button_paste = widgets.Button(description = "Paste", layout={'width': '60px'})
 
     button_forward = widgets.Button(description="→", layout={'width': '35px'})
     button_backward = widgets.Button(description="←", layout={'width': '35px'})
     dropdown = Dropdown(options=images)
     dropdown_block = Box([Label(value='Select image'), dropdown])
 
-    tool_box = HBox([button_paint, button_trash, button_backward, button_forward, dropdown, button_download, button_apply_to_all])
+    tool_box = HBox([button_paint, button_trash, button_backward, button_forward, dropdown, button_download, button_apply_to_all, button_wipe, button_copy, button_paste])
     menu_box = VBox([tool_box])
 
     button_paint.on_click(paint_button_clicked)
     button_trash.on_click(trash_button_clicked)
     button_download.on_click(download_button_clicked)
     button_apply_to_all.on_click(copy_to_all)
+    button_wipe.on_click(wipe_button_clicked)
+    button_copy.on_click(copy_button_clicked)
+    button_paste.on_click(paste_button_clicked)
 
     button_forward.on_click(forward_button_clicked)
     button_backward.on_click(backward_button_clicked)

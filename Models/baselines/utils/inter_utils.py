@@ -393,6 +393,10 @@ def calculate_acc(targets, predicted):
 
     return results, points, TP, FN, FP
 
+def calculate_overlap(target_box, predicted_box, treshold):
+    
+    
+
 def draw_to_image(image, box_dict, dot_dict):
 #Plot targets
     for n, x in enumerate(box_dict["boxes"]):

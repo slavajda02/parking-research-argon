@@ -47,11 +47,14 @@ def pm_widget(annotation_path: str="annotations.json", dataset : str = "img", ou
             except:
                 raise FileNotFoundError("annotations.json not found")
             
+            
             self.img_dict_names = sorted(list(self.markup.keys()))
             self.labels = {}
+            self.old_labels = {}
             for i in self.img_dict_names:
                 data = to_tuple(self.markup[i])
-            self.labels = {file:{data[j]:1 for j in range(len(data))} for file in self.img_dict_names}
+                #self.old_labels[i] = {file:{data[j]:1 for j in range(len(data))} for file in self.img_dict_names}
+                self.labels[i] = {data[j]:1 for j in range(len(data))}
             self.current_image = self.img_dict_names[0]
             
     def get_image(path: str) -> bytes:
@@ -197,7 +200,7 @@ def pm_widget(annotation_path: str="annotations.json", dataset : str = "img", ou
     extensions = ['.jpg', '.jpeg', '.png']
     #corresponding_images = widgets.Label(value=str([f for f in listdir(image_dirs) if os.path.splitext(f)[1] in extensions]))
     corresponding_images = widgets.Label(value = str(annotator.img_dict_names))
-    processed_names = process_list(corresponding_images.value)
+    processed_names = annotator.img_dict_names
     image_dropdown = widgets.Dropdown(options=processed_names)
 
     #buttons
