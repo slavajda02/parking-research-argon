@@ -393,7 +393,7 @@ def calculate_acc(targets, predicted):
 
     return results, points, TP, FN, FP
 
-def calculate_overlap(target_box, predicted_box, treshold):
+#def calculate_overlap(target_box, predicted_box, treshold):
     
     
 
