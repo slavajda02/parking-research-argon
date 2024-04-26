@@ -14,7 +14,7 @@ The training and testing scripts support only a object recognition models for no
 
 Scripts will work with datasets used in Parking-Research
 
-## What hase been added / changed
+## What has been added / changed
 - I written a training script that lets the user choose how to train a model with the dataset format from their work as both as a training script that uses the testing images from the dataset to test the trained model.
 - The creation of your own dataset was a bit simplified and reworked. Consult the readme located in [annotating](annotating/) directory.
 - All of the scripts should run both on CPU and GPU.
