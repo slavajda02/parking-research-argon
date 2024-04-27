@@ -13,12 +13,13 @@ def seed_everything(seed: int) -> None:
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-def get_device() -> torch.device:
+def get_device(debug = False) -> torch.device:
     """Get device."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    if device.type == "cpu":
-        print("Using CPU")
-        print("Recommend using GPU for faster training")
-    else:
-        print("Using GPU")
+    if debug:
+        if device.type == "cpu":
+            print("Using CPU")
+            print("Recommend using GPU for faster training")
+        else:
+            print("Using GPU")
     return device

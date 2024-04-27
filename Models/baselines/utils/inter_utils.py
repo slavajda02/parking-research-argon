@@ -415,6 +415,7 @@ def load_model(model, device, path):
         model.cuda()
 
 def make_pred(model, device, img_batch, treshold):
+    model.eval()
     #Send image to device (would cause problem if it were missing on GPU)
     images = list(image.to(device) for image in img_batch)
     with torch.no_grad():
