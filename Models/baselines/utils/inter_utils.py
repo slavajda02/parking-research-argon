@@ -428,6 +428,7 @@ def load_model(model, device, path):
 
 def make_pred(model, device, img_batch, treshold):
     #Send image to device (would cause problem if it were missing on GPU)
+    model.eval()
     images = list(image.to(device) for image in img_batch)
     with torch.no_grad():
         pred = model(images)
