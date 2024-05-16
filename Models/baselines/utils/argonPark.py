@@ -22,14 +22,16 @@ class parkingLot:
         self.lots = []
         for location in locations:
             self.lots.append(location["coordinates"]) #Each list entry has 4 points with x,y cords
+        
         self.lots = np.array(self.lots, np.int32) #Convert to numpy array
+        self.lots = sorted(self.lots, key=lambda x: [x[0][0]]) # Sorts by X and Y cords
         self.occupancy = [0, len(self.lots)]
     
-        self.parking_spaces = [{"name": i, "cords": lot, "status": False} for i, lot in enumerate(self.lots)] #List of dictionaries for parking spaces enumerated with status set to False
+        self.parking_spaces = [{"name": i+1, "cords": lot, "status": False} for i, lot in enumerate(self.lots)] #List of dictionaries for parking spaces enumerated with status set to False
         for i, lot in enumerate(self.parking_spaces):
             points = lot["cords"]
-            self.parking_spaces[i]["cords"] = Polygon([(points[0][0],points[0][1]), (points[1][0],points[1][1]), (points[2][0],points[2][1]), (points[3][0],points[3][1])])
-            
+            self.parking_spaces[i]["polygons"] = Polygon([(points[0][0],points[0][1]), (points[1][0],points[1][1]), (points[2][0],points[2][1]), (points[3][0],points[3][1])])
+        
         #Getting Torch vision ready
         self.device = self.get_device()
         self.preprocess = transforms.Compose([
@@ -49,10 +51,14 @@ class parkingLot:
             img (np matrix): A cv2 image to draw on.
             debug (bool, optional): If true, the function will save the image. Defaults to False.
         """
-        for i, lot in enumerate(self.lots):
-            lot = lot.reshape((-1,1,2))
-            image = cv2.polylines(img, [lot], isClosed = True, color = (255,0,0), thickness = 2)
-            cv2.putText(img, f"{i}", (lot[0][0][0], lot[0][0][1]), cv2.LINE_AA, 1.2, (0,0,255), 2)
+        for i, lot in enumerate(self.parking_spaces):
+            lot["cords"] = lot["cords"].reshape((-1,1,2))
+            if lot["status"]:
+                cv2.putText(img, f"{i}", lot["cords"][0][0], cv2.LINE_AA, 1.2, (0,0,255), 2)
+                image = cv2.polylines(img, [lot["cords"]], isClosed = True, color = (0,0,255), thickness = 2)
+            else:
+                cv2.putText(img, f"{i}", lot["cords"][0][0], cv2.LINE_AA, 1.2, (0,255,0), 2)
+                image = cv2.polylines(img, [lot["cords"]], isClosed = True, color = (0,255,0), thickness = 2)
         if debug:
             cv2.imwrite("parking_lot.png", image)
         return image
@@ -173,10 +179,10 @@ class parkingLot:
             boxes (list): List of detection boxes
         """
         for i, lot in enumerate(self.parking_spaces):
-            merged_cells = unary_union([boxes[pos] for pos in idx.intersection(lot["cords"].bounds)])
-            if lot["cords"].intersection(merged_cells).area/lot["cords"].area > area_treshold:
+            merged_cells = unary_union([boxes[pos] for pos in idx.intersection(lot["polygons"].bounds)])
+            if lot["polygons"].intersection(merged_cells).area/lot["polygons"].area > area_treshold:
                 lot["status"] = True
-                lot["iou"] = lot["cords"].intersection(merged_cells).area/lot["cords"].area
+                lot["iou"] = lot["polygons"].intersection(merged_cells).area/lot["polygons"].area
             else:
                 lot["status"] = False
                 lot["iou"] = 0
