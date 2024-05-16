@@ -12,6 +12,7 @@ from tqdm import tqdm
 import torch.distributed as dist
 import time
 
+torch.jit.enable_onednn_fusion(True) #Enables oneDNN Graph
 # models = ["faster_rcnn_mobilenet", "faster_rcnn_mobilenetV3_Large", "faster_rcnn_mobilenetV3_Small", "faster_rcnn_resnet", "faster_rcnn_vgg", "retinanet_mobilenet", "retinanet_resnet", "retinanet_vgg", "retinanet_mobilenetV3_Small", "retinanet_mobilenetV3_Large"]
 
 # def parse_args():

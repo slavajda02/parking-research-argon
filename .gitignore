@@ -262,6 +262,10 @@ api.key
 **/testing_result
 renamer.py
 **.JPG
+**.png
 
 Models/plot_results.ipynb
 Models/Bar_Graph.pdf
+
+#State dicts
+**.pth

@@ -17,3 +17,5 @@ dependencies:
   - albumentations
   - comet_ml
   - inquirer
+  - shapely
+  - Rtree
