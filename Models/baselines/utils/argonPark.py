@@ -24,10 +24,11 @@ class parkingLot:
             self.lots.append(location["coordinates"]) #Each list entry has 4 points with x,y cords
         
         self.lots = np.array(self.lots, np.int32) #Convert to numpy array
-        self.lots = sorted(self.lots, key=lambda x: [x[0][0]]) # Sorts by X and Y cords
+        self.lots = sorted(self.lots, key=lambda x: [x[0][0]]) # Sorts by X cord
         self.occupancy = [0, len(self.lots)]
     
         self.parking_spaces = [{"name": i+1, "cords": lot, "status": False} for i, lot in enumerate(self.lots)] #List of dictionaries for parking spaces enumerated with status set to False
+        #Converts the cords to polygons for easier intersection
         for i, lot in enumerate(self.parking_spaces):
             points = lot["cords"]
             self.parking_spaces[i]["polygons"] = Polygon([(points[0][0],points[0][1]), (points[1][0],points[1][1]), (points[2][0],points[2][1]), (points[3][0],points[3][1])])
@@ -38,31 +39,12 @@ class parkingLot:
         transforms.ToTensor(),
         ])
         
-        #Creates a FasterRCNNV3_Large model with 2 classes
+        #Creates a FasterRCNNV3_Large model with 2 classes and loads state dict
         self.model = fasterrcnn_mobilenet_v3_large_fpn(weights = "DEFAULT")
         in_features = self.model.roi_heads.box_predictor.cls_score.in_features
         self.model.roi_heads.box_predictor = faster_rcnn.FastRCNNPredictor(in_features, 2)
         self.load_model(path) #Loads a model from state dict
-            
-    def plot_to_image(self, img, debug = False):
-        """Draws polygons over parking places according to the active mapping.
         
-        Args:
-            img (np matrix): A cv2 image to draw on.
-            debug (bool, optional): If true, the function will save the image. Defaults to False.
-        """
-        for i, lot in enumerate(self.parking_spaces):
-            lot["cords"] = lot["cords"].reshape((-1,1,2))
-            if lot["status"]:
-                cv2.putText(img, f"{i}", lot["cords"][0][0], cv2.LINE_AA, 1.2, (0,0,255), 2)
-                image = cv2.polylines(img, [lot["cords"]], isClosed = True, color = (0,0,255), thickness = 2)
-            else:
-                cv2.putText(img, f"{i}", lot["cords"][0][0], cv2.LINE_AA, 1.2, (0,255,0), 2)
-                image = cv2.polylines(img, [lot["cords"]], isClosed = True, color = (0,255,0), thickness = 2)
-        if debug:
-            cv2.imwrite("parking_lot.png", image)
-        return image
-    
     def get_device(debug = False) -> torch.device:
         """Gets device to be used for machine learning.
         
@@ -124,6 +106,27 @@ class parkingLot:
         pred_class = pred_class[:over_treshold+1]
         self.occupancy[0] = len(pred_boxes)
         return pred_boxes, pred_score
+            
+    def plot_to_image(self, img, debug = False):
+        """Draws polygons over parking places according to the active mapping and occupancy.
+        Args:
+            img (np matrix): A cv2 image to draw on.
+            debug (bool, optional): If true, the function will save the image. Defaults to False.
+        Returns:
+            image (np matrix): Image with colored polygons drawn over parking spaces.
+        """
+        for i, lot in enumerate(self.parking_spaces):
+            lot["cords"] = lot["cords"].reshape((-1,1,2))
+            if lot["status"]:
+                cv2.putText(img, f"{i}", lot["cords"][0][0], cv2.LINE_AA, 1.2, (0,0,255), 2)
+                img = cv2.polylines(img, [lot["cords"]], isClosed = True, color = (0,0,255), thickness = 2)
+            else:
+                cv2.putText(img, f"{i}", lot["cords"][0][0], cv2.LINE_AA, 1.2, (0,255,0), 2)
+                img = cv2.polylines(img, [lot["cords"]], isClosed = True, color = (0,255,0), thickness = 2)
+        if debug:
+            cv2.imwrite("parking_lot.png", img)
+        return img
+    
     
     def show_inference(self, img, treshold = 0.9, debug = False):
         """Shows the inference on an image, with marked parking slots. Goes through the whole inference process.
