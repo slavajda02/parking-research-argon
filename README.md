@@ -16,10 +16,11 @@ Scripts will work with datasets used in Parking-Research
 
 ## What has been added / changed
 - I written a training script that lets the user choose how to train a model with the dataset format from their work as both as a training script that uses the testing images from the dataset to test the trained model.
-- The creation of your own dataset was a bit simplified and reworked. Consult the readme located in [annotating](annotating/) directory.
-- All of the scripts should run both on CPU and GPU.
+- The creation of your own dataset was a bit simplified and reworked. Consult the README located in [annotating](annotating/) directory.
+- All of the scripts are able to run on both CPU and GPU.
 - Tested on Python 3.11
-- Created a new dataset T10LOT (will be improved with more data)
+- Created a new dataset T10LOT shot on multiple cameras
+- ArgonPark library
 
 ## Downloads
 [Images containing testing results with trained models and T10LOT dataset](https://drive.google.com/drive/folders/1Jvvc7PKZTQi63PJnOjMKW9x3qeNipSYl?usp=drive_link)
@@ -70,6 +71,12 @@ After training a model you can test it using the `test.py` script. Run it and fo
 python test.py
 ```
 The testing function can print out the time of one inference and save all of the images that were tested.
+
+# ArgonPark library
+
+This library was made to utilize the trained model from previous steps with an algorithm to evaluate occupancy on a dedicated parking lot.
+It acts as a base for a raspberry pi host script that has a web interface which interfaces with this library and its methods.
+Documentation is in the works.
 
 # Contact me
 
