@@ -80,13 +80,21 @@ def pa_widget(img_path = "map.jpg", output_dir = ""):
                     annotator.axes.lines[-1].remove()
             axes.imshow(annotator.img)
 
-    def download_button_clicked(b):    
+    def download_button_clicked(b):
+        print(annotator.annotation_dict)
+        processed = []
+        for polygon in annotator.annotation_dict[0]:
+            reshaped_polygon = []
+            points = []
+            for i in range(len(polygon[0])):
+                reshaped_polygon.append([round(polygon[0][i]), round(polygon[1][i])])
+            processed.append(reshaped_polygon)
         with open(output_dir + "map.json", "w") as outfile:
-            json.dump(annotator.annotation_dict, outfile)
+            json.dump(processed, outfile)
        
         with open(output_dir + "metadata.json", "w") as outfile:
             json.dump(metadata, outfile)
-        print("Saving sucesfull! Run the next widget")
+        print("Map saved to map.json!")
 
     metadata = dict()
 
@@ -96,7 +104,7 @@ def pa_widget(img_path = "map.jpg", output_dir = ""):
 
     img = load_image(selected_image)
         
-    fig, axes = plt.subplots(figsize=[16,9], num='Markup widget rev2')
+    fig, axes = plt.subplots(figsize=[16,9], num='Parking map creator v1.0')
     axes.imshow(img)
     plt.axis("off")
     fig.get_tight_layout()

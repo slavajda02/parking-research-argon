@@ -17,11 +17,11 @@ class parkingLot:
     def __init__(self, parking_locations, path, scale_down = 1):
         #Reads the initial parking lot locations from the map json
         with open(parking_locations) as f:
-            data = json.load(f)
-        locations = data["lots"] #Lots, with 4 points and label
-        self.lots = []
-        for location in locations:
-            self.lots.append(location["coordinates"]) #Each list entry has 4 points with x,y cords
+            self.lots = json.load(f)
+        #locations = data["lots"] #Lots, with 4 points and label
+        #self.lots = []
+        #for location in locations:
+        #    self.lots.append(location["coordinates"]) #Each list entry has 4 points with x,y cords
         
         self.lots = np.array(self.lots, np.int32) #Convert to numpy array
         self.lots = sorted(self.lots, key=lambda x: [x[0][0]]) # Sorts by X cord
