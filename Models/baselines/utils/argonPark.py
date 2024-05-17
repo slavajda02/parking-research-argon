@@ -24,7 +24,7 @@ class parkingLot:
         #    self.lots.append(location["coordinates"]) #Each list entry has 4 points with x,y cords
         
         self.lots = np.array(self.lots, np.int32) #Convert to numpy array
-        self.lots = sorted(self.lots, key=lambda x: [x[0][0]]) # Sorts by X cord
+        #self.lots = sorted(self.lots, key=lambda x: [x[0][0]]) # Sorts by X cord
         self.occupancy = [0, len(self.lots)]
     
         self.parking_spaces = [{"name": i+1, "cords": lot, "status": False} for i, lot in enumerate(self.lots)] #List of dictionaries for parking spaces enumerated with status set to False
