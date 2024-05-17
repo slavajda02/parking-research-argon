@@ -91,9 +91,6 @@ def pa_widget(img_path = "map.jpg", output_dir = ""):
             processed.append(reshaped_polygon)
         with open(output_dir + "map.json", "w") as outfile:
             json.dump(processed, outfile)
-       
-        with open(output_dir + "metadata.json", "w") as outfile:
-            json.dump(metadata, outfile)
         print("Map saved to map.json!")
 
     metadata = dict()
