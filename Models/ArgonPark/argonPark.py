@@ -5,7 +5,7 @@ import json
 from torchvision import transforms
 from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_fpn, faster_rcnn
 import warnings
-from shapely import MultiPolygon, Polygon, box
+from shapely import Polygon, box
 from rtree import index
 from shapely.ops import unary_union
 

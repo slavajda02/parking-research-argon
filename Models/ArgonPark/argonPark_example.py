@@ -1,6 +1,6 @@
 from baselines.utils.argonPark import *
-# Example usage
 
+#Example usage of argonPark
 input_img = cv2.imread(r"Models/test.jpg")
 parking_lot = r"Models/map.json"
 model_path = r"Models/Saved_Models/Low_epoch_T10LOT/state_dict_final.pth"
