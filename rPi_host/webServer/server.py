@@ -4,7 +4,7 @@ from config import Config
 from app.argonPark import *
 from app.forms import LoginForm
 import multiprocessing
-#from picamera2 import Picamera2
+from picamera2 import Picamera2
 
 import time
 import cv2
@@ -23,30 +23,24 @@ images_dir = []
 class parkingProcess(multiprocessing.Process):
     def __init__(self, process_queue, stop_event):
         multiprocessing.Process.__init__(self)
-        self.img_pointer = 0
         self.queue = process_queue
         self.stop_event = stop_event
         self.parking = parkingLot('map.json', 'state_dict_final.pth')
         self.stop_flag = False
         self.image_flag = True
+        self.camera = prepareCamera()
     
     def run(self):
         while not self.stop_event.is_set():
-            self.image = getImage(self.img_pointer)
+            self.image = getImageCamera(self.camera)
             status_dict = self.parking.evaulate_occupancy(self.image)
             self.queue.put(status_dict)
-            self.img_pointer += 1
             if self.stop_flag:
                 break
             if self.image_flag:
                 self.image = self.parking.plot_to_image(self.image)
                 cv2.imwrite('static/img/output.jpg', self.image)
-            # Sleep for 3 seconds, but check the stop_event every 0.1 seconds
-            for _ in range(30):
-                time.sleep(0.1)
-                if self.stop_event.is_set():
-                    break
-        
+                
     def stop(self):
         self.stop_flag = True
         self.stop_event.set()
@@ -59,10 +53,11 @@ def prepareCamera():
     camera_config = picam2.create_still_configuration({"size" : (3200, 1800)})
     picam2.configure(camera_config)
     picam2.start()
+    return picam2
 
 #Gets an image form Picamera2 in a correct format
-def getImageCamera():
-    image = picam2.capture_array()
+def getImageCamera(camera):
+    image = camera.capture_array()
     image = image[:,:, [2, 1, 0]]
     return image
 
@@ -92,11 +87,13 @@ def login():
 @web.route('/parking')
 def show_parking():
     global p
+    info = ""
     if p is not None:
         try:
             status = p.queue.get_nowait()
         except queue.Empty:
             status = None
+            info = "Queue empty"
         if status:
             i = 0
             for lot in status:
@@ -104,7 +101,7 @@ def show_parking():
                     i+=1
             flash(f"Request sucessful, {i} parking spaces occupied")
             return redirect('/')
-    flash("Request failed, no data")
+    flash(f"Request failed, no data {info}")
     return redirect('/')
 
 @web.route('/parking/start')
@@ -146,6 +143,6 @@ if __name__ == '__main__':
     process_queue = multiprocessing.Queue()
     stop_event = multiprocessing.Event()
     try:
-        web.run(debug=True, host='0.0.0.0', port=80, use_reloader=False) #Web server launch
+        web.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False) #Web server launch
     except KeyboardInterrupt:
         p.stop() #Stops the inference loop

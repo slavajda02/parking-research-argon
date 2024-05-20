@@ -263,10 +263,13 @@ api.key
 renamer.py
 **.JPG
 **.png
+**.jpg
 
 Models/plot_results.ipynb
 Models/Bar_Graph.pdf
 
 #State dicts
 **.pth
+
+#Dataset
 **T10LOT
