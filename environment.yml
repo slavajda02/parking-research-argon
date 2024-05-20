@@ -19,3 +19,5 @@ dependencies:
   - inquirer
   - shapely
   - Rtree
+  - flask-wtf
+  - flask

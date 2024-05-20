@@ -1,15 +1,12 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Parking Occupancy Detection</title>
-    <link rel="stylesheet" type="text/css" href="styles.css">
-</head>
-<body>
-    <h1>Welcome to the Parking Occupancy Detection System</h1>
-    <p>This website allows you to manage parking occupancy detection for your facility.</p>
-    
-    <!-- Add your content here -->
-    
-    <script src="script.js"></script>
-</body>
-</html>
+{% extends "base.html"%}
+
+
+{% block content %}
+    <h1>Welcome to the T10LOT Parking Occupancy Detection System</h1>
+    <p>This website allows you to view the occupancy status of the T10 parking lot</p>
+    <a href="/parking/start" class="btn">Start inference</a>
+    <a href="/parking/stop" class="btn">Stop inference</a>
+    <a href="/parking" class="btn">View parking lot status</a>
+    <a href="/parking/image" class="btn">Save an image</a>
+    <img src="{{ url_for('static', filename='img/output.jpg') }}" alt="Current parking image">
+{% endblock %}
