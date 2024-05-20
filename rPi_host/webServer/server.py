@@ -1,10 +1,11 @@
 from flask import Flask, render_template, flash, redirect
+from app.argonPark import *
 import queue
 from config import Config
-from app.argonPark import *
 from app.forms import LoginForm
 import multiprocessing
 from picamera2 import Picamera2
+import logging
 
 import time
 import cv2
@@ -13,10 +14,6 @@ import os
 web = Flask(__name__)
 web.config.from_object(Config)
 p = None
-
-#DEBUGING purposes
-path = r"T10LOT/T10LOT/Images"
-images_dir = []
 
 ##Multiprocessing class everyting running here is seperate process!
 ##Acess only through queue and other multiprocessing tools
@@ -28,46 +25,34 @@ class parkingProcess(multiprocessing.Process):
         self.parking = parkingLot('map.json', 'state_dict_final.pth')
         self.stop_flag = False
         self.image_flag = True
-        self.camera = prepareCamera()
     
     def run(self):
+        picam2 = Picamera2()
+        camera_config = picam2.create_still_configuration({"size" : (3200, 1800)})
+        picam2.configure(camera_config)
+        picam2.start()
         while not self.stop_event.is_set():
-            self.image = getImageCamera(self.camera)
+            self.image = picam2.capture_array()
+            self.image = self.image[:,:, [2, 1, 0]]
+            self.image = cv2.resize(self.image, (1920, 1080))
             status_dict = self.parking.evaulate_occupancy(self.image)
             self.queue.put(status_dict)
             if self.stop_flag:
                 break
             if self.image_flag:
-                self.image = self.parking.plot_to_image(self.image)
-                cv2.imwrite('static/img/output.jpg', self.image)
+                image = self.parking.plot_to_image(self.image)
+                cv2.imwrite('static/img/output.jpg', image)
                 
     def stop(self):
         self.stop_flag = True
         self.stop_event.set()
 
-
-##Helper functions
-#Starts Picamera2 and configures it
-def prepareCamera():
-    picam2 = Picamera2()
-    camera_config = picam2.create_still_configuration({"size" : (3200, 1800)})
-    picam2.configure(camera_config)
-    picam2.start()
-    return picam2
-
-#Gets an image form Picamera2 in a correct format
-def getImageCamera(camera):
-    image = camera.capture_array()
-    image = image[:,:, [2, 1, 0]]
-    return image
-
-#Getting an image from a directory for testing purposes
-def getImage(pointer):
-    if not images_dir:
-        for p in os.listdir(path):
-            images_dir.append(path + '/' + p)
-    image = cv2.imread(images_dir[pointer])
-    return image
+    #Gets an image form Picamera2 in a correct format
+    def getImageCamera(self):
+        image = self.picam2.capture_array()
+        image = image[:,:, [2, 1, 0]]
+        image = cv2.resize(image, (1920, 1080))
+        return image
 
 
 ##Flask routes and functions

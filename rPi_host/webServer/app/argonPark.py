@@ -103,7 +103,7 @@ class parkingLot:
         self.occupancy[0] = len(pred_boxes)
         return pred_boxes, pred_score
             
-    def plot_to_image(self, img, debug = False):
+    def plot_to_image(self, save = False):
         """Draws polygons over parking places according to the active mapping and occupancy.
         Args:
             img (np matrix): A cv2 image to draw on.
@@ -111,20 +111,25 @@ class parkingLot:
         Returns:
             image (np matrix): Image with colored polygons drawn over parking spaces.
         """
+        try:
+            image = cv2.cvtColor(self.img, cv2.COLOR_RGB2BGR)
+        except AttributeError:
+            print("No image loaded yet, run inference")
+            return None
         for i, lot in enumerate(self.parking_spaces):
             lot["cords"] = lot["cords"].reshape((-1,1,2))
             if lot["status"]:
-                cv2.putText(img, f"{i}", lot["cords"][0][0], cv2.LINE_AA, 1.2, (0,0,255), 2)
-                img = cv2.polylines(img, [lot["cords"]], isClosed = True, color = (0,0,255), thickness = 2)
+                cv2.putText(image, f"{i}", lot["cords"][0][0], cv2.LINE_AA, 1.2, (0,0,255), 2)
+                img = cv2.polylines(image, [lot["cords"]], isClosed = True, color = (0,0,255), thickness = 2)
             else:
-                cv2.putText(img, f"{i}", lot["cords"][0][0], cv2.LINE_AA, 1.2, (0,255,0), 2)
-                img = cv2.polylines(img, [lot["cords"]], isClosed = True, color = (0,255,0), thickness = 2)
-        if debug:
-            cv2.imwrite("parking_lot.png", img)
-        return img
+                cv2.putText(image, f"{i}", lot["cords"][0][0], cv2.LINE_AA, 1.2, (0,255,0), 2)
+                img = cv2.polylines(image, [lot["cords"]], isClosed = True, color = (0,255,0), thickness = 2)
+        if save.any():
+            cv2.imwrite("parking_lot.png", image)
+        return image
     
     
-    def show_inference(self, img, treshold = 0.9, debug = False):
+    def show_inference(self, treshold = 0.9, save = False):
         """Shows the inference on an image, with marked parking slots. Goes through the whole inference process.
 
         Args:
@@ -135,8 +140,12 @@ class parkingLot:
         Returns:
             np matrix: Image with detetions marked
         """
-        img = self.plot_to_image(img)
-        boxes, score = self.make_pred(img, treshold)
+        try:
+            img = self.plot_to_image(self.img)
+        except AttributeError:
+            print("No image loaded yet, run inference")
+            return None
+        boxes, score = self.make_pred(self.img, treshold)
         #Top left corner info text
         cv2.putText(img, f"{self.occupancy[0]} occupied out of {self.occupancy[1]}", (100, 100), cv2.LINE_AA, 1.2, (0,0,255), 2) 
         for i, x in enumerate(boxes):
@@ -144,11 +153,11 @@ class parkingLot:
             cv2.rectangle(img, (int(x[0][0]),int(x[0][1])), (int(x[1][0]),int(x[1][1])), color=(0, 0, 255), thickness=2)
             #cv2.putText(img, str(round(score[i],2)), (int(x[0][0]),int(x[0][1])), cv2.LINE_AA, 1.5, (0,255,0), 1)
             cv2.putText(img, "Busy", (int(x[0][0]),int(x[0][1])), cv2.LINE_AA, 1.2, (0,0,255), 2)
-        if debug:
+        if save.any():
             cv2.imwrite("parking_lot.png", img)
         return img
     
-    def evaulate_occupancy(self, img, overlap = 0.75,  debug = False):
+    def evaulate_occupancy(self, img, overlap = 0.75):
         """Evaluates the occupancy of the parking lot.
 
         Args:
@@ -159,8 +168,9 @@ class parkingLot:
         Returns:
             int: Number of occupied parking spaces
         """
+        self.img = img
         idx = index.Index()
-        boxes, score = self.make_pred(img)
+        boxes, score = self.make_pred(self.img)
         boxes = [box(x[0][0], x[0][1], x[1][0], x[1][1]) for x in boxes]
         
         for pos, cell in enumerate(boxes):
