@@ -3,6 +3,7 @@ from multiprocessing import Queue, Event, Process, Value
 import cv2
 import os
 import time
+import sqlite3
 #from picamera2 import Picamera2
 
 ##Flag variables for communication between processes
@@ -17,7 +18,7 @@ DELAY = 3 #Fetch new image every 5 seconds
 ##Multiprocessing class everyting running here is seperate process!
 ##Acess only through queue and other multiprocessing tools
 class parkingProcess(Process):
-    def __init__(self, process_queue, stop_event, image_save, image_raw, json_reload, state_dict_reload):
+    def __init__(self, process_queue, stop_event, image_save, image_raw, json_reload, state_dict_reload, db):
         Process.__init__(self)
         self.queue = process_queue
         self.stop_event = stop_event
@@ -26,6 +27,7 @@ class parkingProcess(Process):
         self.image_raw = image_raw
         self.json_reaload = json_reload
         self.state_dict_reload = state_dict_reload
+        self.db = db
     
     def run(self):
         i = 0
@@ -51,6 +53,7 @@ class parkingProcess(Process):
                 self.image = cv2.resize(self.image, (1920, 1080))
                 #Inference
                 status_dict = self.parking.evaulate_occupancy(self.image)
+                #Converts the output to a dictionary for a the database
                 self.queue.put(status_dict)
                 #Result image save
                 if self.image_save.value:
@@ -64,7 +67,7 @@ class parkingProcess(Process):
                 else:
                     i += 1
                 timer = 0
-                
+            
                 
             #Reloads the map json
             if self.json_reaload.value:
@@ -81,7 +84,8 @@ class parkingProcess(Process):
 
             time.sleep(0.1)
             timer += 0.1
-    
+        conn.close()
+        
     #Stops the process, freezes if not called on p.join()
     def stop(self):
         self.stop_event.set()

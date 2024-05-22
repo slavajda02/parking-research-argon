@@ -1,18 +1,24 @@
 import os
 import time
 from flask import Flask, render_template, flash, redirect, url_for, request
+from flask_pymongo import PyMongo
 from werkzeug.utils import secure_filename
 from app.process import *
 import queue
 from config import Config
 from app.forms import LoginForm
 
-##Flash setup
+##Flask setup
 UPLOAD_FOLDER = '/uploads'
 ALLOWED_EXTENSIONS = {'json', 'pth'}
 web = Flask(__name__)
 web.config.from_object(Config)
 web.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+web.config["MONGO_URI"] = "mongodb+srv://240648:GRziVfkVYYMGaQWa@t10lot.mzbydiy.mongodb.net/?retryWrites=true&w=majority&appName=T10LOT"
+
+#Setup mongodb
+mongodb_client = PyMongo(web)
+db = mongodb_client.db
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -66,7 +72,7 @@ def upload_file():
             flash('File uploaded')
             return redirect(request.url)
     image_raw.value = True
-    time.sleep(4)
+    time.sleep(1)
     return(render_template('upload.html'))
 
 #Inference start withs the webserver, used only when manualy stopping and starting the inference
@@ -111,7 +117,7 @@ if __name__ == '__main__':
     process_queue = Queue()
     stop_event = Event()
     image_save.value = True
-    p = parkingProcess(process_queue, stop_event, image_save, image_raw, json_reload, state_dict_reload)
+    p = parkingProcess(process_queue, stop_event, image_save, image_raw, json_reload, state_dict_reload, db)
     p.start()
     try:
         web.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False) #Web server launch
