@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <title>Map and state dict upload</title>
+    Please save the raw image and annotate. Upload the new map.json generated. Images should refresh after an upload.
+    <img class="img-fluid", src="{{ url_for('static', filename='img/output.jpg') }}" alt="Current parking image">
+    <img class="img-fluid", src="{{ url_for('static', filename='img/raw.jpg') }}" alt="Current parking image">
+    <h1>Upload new files</h1>
+    <form method=post enctype=multipart/form-data>
+        <input type=file name=file>
+        <input type=submit value=Upload>
+    </form>
+{% endblock %}

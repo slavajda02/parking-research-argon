@@ -1,74 +1,35 @@
-from flask import Flask, render_template, flash, redirect
-from app.argonPark import *
+import os
+import time
+from flask import Flask, render_template, flash, redirect, url_for, request
+from werkzeug.utils import secure_filename
+from app.process import *
 import queue
 from config import Config
 from app.forms import LoginForm
-import multiprocessing
-from picamera2 import Picamera2
-import logging
 
-import time
-import cv2
-import os
-
+##Flash setup
+UPLOAD_FOLDER = '/uploads'
+ALLOWED_EXTENSIONS = {'json', 'pth'}
 web = Flask(__name__)
 web.config.from_object(Config)
+web.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+#Empty global variable for multiprocessing object
 p = None
-
-##Multiprocessing class everyting running here is seperate process!
-##Acess only through queue and other multiprocessing tools
-class parkingProcess(multiprocessing.Process):
-    def __init__(self, process_queue, stop_event):
-        multiprocessing.Process.__init__(self)
-        self.queue = process_queue
-        self.stop_event = stop_event
-        self.parking = parkingLot('map.json', 'state_dict_final.pth')
-        self.stop_flag = False
-        self.image_flag = True
-    
-    def run(self):
-        picam2 = Picamera2()
-        camera_config = picam2.create_still_configuration({"size" : (3200, 1800)})
-        picam2.configure(camera_config)
-        picam2.start()
-        while not self.stop_event.is_set():
-            self.image = picam2.capture_array()
-            self.image = self.image[:,:, [2, 1, 0]]
-            self.image = cv2.resize(self.image, (1920, 1080))
-            status_dict = self.parking.evaulate_occupancy(self.image)
-            self.queue.put(status_dict)
-            if self.stop_flag:
-                break
-            if self.image_flag:
-                image = self.parking.plot_to_image(self.image)
-                cv2.imwrite('static/img/output.jpg', image)
-                
-    def stop(self):
-        self.stop_flag = True
-        self.stop_event.set()
-
-    #Gets an image form Picamera2 in a correct format
-    def getImageCamera(self):
-        image = self.picam2.capture_array()
-        image = image[:,:, [2, 1, 0]]
-        image = cv2.resize(image, (1920, 1080))
-        return image
 
 
 ##Flask routes and functions
+#Index page
 @web.route('/')
 def index():
     return render_template('index.html')
 
-@web.route('/login', methods=['GET', 'POST'])
-def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        flash('Login requested for user {}, remember_me={}'.format(
-            form.username.data, form.remember_me.data))
-        return redirect('/')
-    return render_template('login.html', form=form)
-
+#Parking database and histogram
 @web.route('/parking')
 def show_parking():
     global p
@@ -89,6 +50,26 @@ def show_parking():
     flash(f"Request failed, no data {info}")
     return redirect('/')
 
+@web.route('/upload', methods=['GET', 'POST'])
+def upload_file():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file part')
+            return redirect(request.url)
+        file = request.files['file']
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(web.config['UPLOAD_FOLDER'], filename))
+            flash('File uploaded')
+            return redirect(request.url)
+    image_raw.value = True
+    time.sleep(4)
+    return(render_template('upload.html'))
+
+#Inference start withs the webserver, used only when manualy stopping and starting the inference
 @web.route('/parking/start')
 def start_parking():
     global p
@@ -100,6 +81,7 @@ def start_parking():
         flash("Parking inference already running")
     return redirect('/')
 
+#Unsafe, don't really recommend
 @web.route('/parking/stop')
 def stop_parking():
     global p
@@ -122,11 +104,15 @@ def show_image():
         flash("No inference running")
     return redirect('/')
 
+
 ##Main
 if __name__ == '__main__':
     #Creates a multiprocessing object and runs it's loop
-    process_queue = multiprocessing.Queue()
-    stop_event = multiprocessing.Event()
+    process_queue = Queue()
+    stop_event = Event()
+    image_save.value = True
+    p = parkingProcess(process_queue, stop_event, image_save, image_raw, json_reload, state_dict_reload)
+    p.start()
     try:
         web.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False) #Web server launch
     except KeyboardInterrupt:

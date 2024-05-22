@@ -16,18 +16,7 @@ class parkingLot:
     """
     def __init__(self, parking_locations, path):
         #Reads the initial parking lot locations from the map json
-        with open(parking_locations) as f:
-            self.lots = json.load(f)
-        
-        self.lots = np.array(self.lots, np.int32) #Convert to numpy array
-        #self.lots = sorted(self.lots, key=lambda x: [x[0][0]]) # Sorts by X cord
-        self.occupancy = [0, len(self.lots)]
-    
-        self.parking_spaces = [{"name": i+1, "cords": lot, "status": False} for i, lot in enumerate(self.lots)] #List of dictionaries for parking spaces enumerated with status set to False
-        #Converts the cords to polygons for easier intersection
-        for i, lot in enumerate(self.parking_spaces):
-            points = lot["cords"]
-            self.parking_spaces[i]["polygons"] = Polygon([(points[0][0],points[0][1]), (points[1][0],points[1][1]), (points[2][0],points[2][1]), (points[3][0],points[3][1])])
+        self.reload_JSON(parking_locations)
         
         #Getting Torch vision ready
         self.device = self.get_device()
@@ -41,6 +30,21 @@ class parkingLot:
         self.model.roi_heads.box_predictor = faster_rcnn.FastRCNNPredictor(in_features, 2)
         self.load_model(path) #Loads a model from state dict
         
+    def reload_JSON(self, path):
+        """Reloads the JSON map file for the parking lot.
+
+        Args:
+            path (str): Path to the JSON file
+        """
+        with open(path) as f:
+            self.lots = json.load(f)
+        self.lots = np.array(self.lots, np.int32) #Convert to numpy array
+        self.parking_spaces = [{"name": i+1, "cords": lot, "status": False} for i, lot in enumerate(self.lots)] #List of dictionaries for parking spaces enumerated with status set to False
+        #Converts the cords to polygons for easier intersection
+        for i, lot in enumerate(self.parking_spaces):
+            points = lot["cords"]
+            self.parking_spaces[i]["polygons"] = Polygon([(points[0][0],points[0][1]), (points[1][0],points[1][1]), (points[2][0],points[2][1]), (points[3][0],points[3][1])])
+            
     def get_device(debug = False) -> torch.device:
         """Gets device to be used for machine learning.
         
@@ -100,10 +104,9 @@ class parkingLot:
             over_treshold = 0
         pred_boxes = pred_boxes[:over_treshold+1]
         pred_class = pred_class[:over_treshold+1]
-        self.occupancy[0] = len(pred_boxes)
         return pred_boxes, pred_score
             
-    def plot_to_image(self, save = False):
+    def plot_to_image(self, debug = False):
         """Draws polygons over parking places according to the active mapping and occupancy.
         Args:
             img (np matrix): A cv2 image to draw on.
@@ -124,12 +127,11 @@ class parkingLot:
             else:
                 cv2.putText(image, f"{i}", lot["cords"][0][0], cv2.LINE_AA, 1.2, (0,255,0), 2)
                 img = cv2.polylines(image, [lot["cords"]], isClosed = True, color = (0,255,0), thickness = 2)
-        if save.any():
+        if debug:
             cv2.imwrite("parking_lot.png", image)
         return image
     
-    
-    def show_inference(self, treshold = 0.9, save = False):
+    def show_inference(self, treshold = 0.9, debug = False):
         """Shows the inference on an image, with marked parking slots. Goes through the whole inference process.
 
         Args:
@@ -147,13 +149,12 @@ class parkingLot:
             return None
         boxes, score = self.make_pred(self.img, treshold)
         #Top left corner info text
-        cv2.putText(img, f"{self.occupancy[0]} occupied out of {self.occupancy[1]}", (100, 100), cv2.LINE_AA, 1.2, (0,0,255), 2) 
         for i, x in enumerate(boxes):
             #Car detection boxes
             cv2.rectangle(img, (int(x[0][0]),int(x[0][1])), (int(x[1][0]),int(x[1][1])), color=(0, 0, 255), thickness=2)
             #cv2.putText(img, str(round(score[i],2)), (int(x[0][0]),int(x[0][1])), cv2.LINE_AA, 1.5, (0,255,0), 1)
             cv2.putText(img, "Busy", (int(x[0][0]),int(x[0][1])), cv2.LINE_AA, 1.2, (0,0,255), 2)
-        if save.any():
+        if debug:
             cv2.imwrite("parking_lot.png", img)
         return img
     

@@ -1,12 +1,14 @@
 {% extends "base.html"%}
 
-
 {% block content %}
-    <h1>Welcome to the T10LOT Parking Occupancy Detection System</h1>
-    <p>This website allows you to view the occupancy status of the T10 parking lot</p>
-    <a href="/parking/start" class="btn">Start inference</a>
-    <a href="/parking/stop" class="btn">Stop inference</a>
-    <a href="/parking" class="btn">View parking lot status</a>
-    <a href="/parking/image" class="btn">Save an image</a>
-    <img src="{{ url_for('static', filename='img/output.jpg') }}" alt="Current parking image">
+    <img id="parkingImage" class="img-fluid" src="{{ url_for('static', filename='img/output.jpg') }}" alt="">
+{% endblock %}
+
+{% block js %}
+    <script>
+        setInterval(function() {
+            var d = new Date();
+            document.getElementById('parkingImage').src = "{{ url_for('static', filename='img/output.jpg') }}?ver=" + d.getTime();
+        }, );
+    </script>
 {% endblock %}
