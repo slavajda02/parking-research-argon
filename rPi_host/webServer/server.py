@@ -6,7 +6,6 @@ from werkzeug.utils import secure_filename
 from app.process import *
 import queue
 from config import Config
-from app.forms import LoginForm
 
 ##Flask setup
 UPLOAD_FOLDER = '/uploads'

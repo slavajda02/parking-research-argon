@@ -3,7 +3,7 @@ from multiprocessing import Queue, Event, Process, Value
 import cv2
 import os
 import time
-import sqlite3
+from datetime import datetime
 #from picamera2 import Picamera2
 
 ##Flag variables for communication between processes
@@ -27,7 +27,7 @@ class parkingProcess(Process):
         self.image_raw = image_raw
         self.json_reaload = json_reload
         self.state_dict_reload = state_dict_reload
-        self.db = db
+        self.collection = db['parking_data_test']
     
     def run(self):
         i = 0
@@ -53,7 +53,15 @@ class parkingProcess(Process):
                 self.image = cv2.resize(self.image, (1920, 1080))
                 #Inference
                 status_dict = self.parking.evaulate_occupancy(self.image)
-                #Converts the output to a dictionary for a the database
+                
+                ##Prepares data for database
+                data_out = {"timestamp": datetime.now(datetime.UTC).isoformat(), "parking_lot": {}}
+                for lot in status_dict:
+                    lot.pop('polygons', None)
+                    data_out["parking_lot"].append(lot)
+                self.collection.insert_one(data_out)
+                
+                #Sends data to the webserver
                 self.queue.put(status_dict)
                 #Result image save
                 if self.image_save.value:
@@ -84,7 +92,6 @@ class parkingProcess(Process):
 
             time.sleep(0.1)
             timer += 0.1
-        conn.close()
         
     #Stops the process, freezes if not called on p.join()
     def stop(self):
