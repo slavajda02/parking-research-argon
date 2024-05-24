@@ -1,4 +1,4 @@
-from app.argonPark import *
+from rPi_host.webServer.app.ArgonPark.argonPark import *
 from picamera2 import Picamera2
 
 

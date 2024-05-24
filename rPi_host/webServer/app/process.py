@@ -1,4 +1,4 @@
-from app.argonPark import *
+from app.ArgonPark.argonPark import *
 from multiprocessing import Queue, Event, Process, Value
 import cv2
 import os
