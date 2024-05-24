@@ -14,8 +14,10 @@ class parkingLot:
     Contains decision algorithms for parking Lot occupancy.
     Takes images as inputs and returns occupancy status with images.
     """
-    def __init__(self, parking_locations, path):
+    def __init__(self, parking_locations, path, img_scale = 1):
         #Reads the initial parking lot locations from the map json
+        self.img_scale = img_scale
+        self.img_size = (1920, 1080)
         self.reload_JSON(parking_locations)
         
         #Getting Torch vision ready
@@ -38,6 +40,10 @@ class parkingLot:
         """
         with open(path) as f:
             self.lots = json.load(f)
+        if not self.img_scale == 1:
+            self.lots = np.array(self.lots, np.int32) #Convert to numpy array
+            self.lots = self.lots * self.img_scale
+            
         self.lots = np.array(self.lots, np.int32) #Convert to numpy array
         self.parking_spaces = [{"name": i+1, "cords": lot, "status": False} for i, lot in enumerate(self.lots)] #List of dictionaries for parking spaces enumerated with status set to False
         #Converts the cords to polygons for easier intersection
@@ -105,7 +111,18 @@ class parkingLot:
         pred_boxes = pred_boxes[:over_treshold+1]
         pred_class = pred_class[:over_treshold+1]
         return pred_boxes, pred_score
-            
+    
+    def resize_image(self, img):
+        """Resizes an image to the desired size.
+
+        Args:
+            img (np matrix): Image to resize
+
+        Returns:
+            np matrix: Resized image
+        """
+        return cv2.resize(img, (int(self.img_size[0]*self.img_scale), int(self.img_size[1]*self.img_scale)))
+    
     def plot_to_image(self, debug = False):
         """Draws polygons over parking places according to the active mapping and occupancy.
         Args:
@@ -115,18 +132,19 @@ class parkingLot:
             image (np matrix): Image with colored polygons drawn over parking spaces.
         """
         try:
-            image = cv2.cvtColor(self.img, cv2.COLOR_RGB2BGR)
+            image = self.img
         except AttributeError:
             print("No image loaded yet, run inference")
             return None
+        
         for i, lot in enumerate(self.parking_spaces):
             lot["cords"] = lot["cords"].reshape((-1,1,2))
             if lot["status"]:
                 cv2.putText(image, f"{i}", lot["cords"][0][0], cv2.LINE_AA, 1.2, (0,0,255), 2)
-                img = cv2.polylines(image, [lot["cords"]], isClosed = True, color = (0,0,255), thickness = 2)
+                cv2.polylines(image, [lot["cords"]], isClosed = True, color = (0,0,255), thickness = 2)
             else:
                 cv2.putText(image, f"{i}", lot["cords"][0][0], cv2.LINE_AA, 1.2, (0,255,0), 2)
-                img = cv2.polylines(image, [lot["cords"]], isClosed = True, color = (0,255,0), thickness = 2)
+                cv2.polylines(image, [lot["cords"]], isClosed = True, color = (0,255,0), thickness = 2)
         if debug:
             cv2.imwrite("parking_lot.png", image)
         return image
@@ -158,7 +176,7 @@ class parkingLot:
             cv2.imwrite("parking_lot.png", img)
         return img
     
-    def evaulate_occupancy(self, img, overlap = 0.75):
+    def evaulate_occupancy(self, img, overlap = 0.8):
         """Evaluates the occupancy of the parking lot.
 
         Args:
@@ -169,7 +187,10 @@ class parkingLot:
         Returns:
             int: Number of occupied parking spaces
         """
-        self.img = img
+        if not self.img_scale == 1:
+            self.img = self.resize_image(img)
+        else:
+            self.img = img
         idx = index.Index()
         boxes, score = self.make_pred(self.img)
         boxes = [box(x[0][0], x[0][1], x[1][0], x[1][1]) for x in boxes]

@@ -9,6 +9,6 @@
         setInterval(function() {
             var d = new Date();
             document.getElementById('parkingImage').src = "{{ url_for('static', filename='img/output.jpg') }}?ver=" + d.getTime();
-        }, 1000);
+        }, 2000);
     </script>
 {% endblock %}

@@ -8,7 +8,7 @@ import queue
 from config import Config
 
 ##Flask setup
-UPLOAD_FOLDER = '/uploads'
+UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'json', 'pth'}
 web = Flask(__name__)
 web.config.from_object(Config)
@@ -63,15 +63,29 @@ def upload_file():
             return redirect(request.url)
         file = request.files['file']
         if file.filename == '':
-            flash('No selected file')
+            flash('No file to upload')
             return redirect(request.url)
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            file.save(os.path.join(web.config['UPLOAD_FOLDER'], filename))
+            if filename.rsplit('.', 1)[1].lower() == "json":
+                file.save(os.path.join(web.config['UPLOAD_FOLDER'], "map.json"))
+                json_reload.value = True
+            else:
+                file.save(os.path.join(web.config['UPLOAD_FOLDER'], "state_dict_final.pth"))
+                state_dict_reload.value = True
             flash('File uploaded')
+            image_raw.value = True
+            task_start.set()
+            task_done.clear()
+            task_done.wait()
+            return redirect(request.url)
+        else:
+            flash('Invalid file!')
             return redirect(request.url)
     image_raw.value = True
-    time.sleep(1)
+    task_start.set()
+    task_done.clear()
+    task_done.wait()
     return(render_template('upload.html'))
 
 #Inference start withs the webserver, used only when manualy stopping and starting the inference
@@ -115,8 +129,10 @@ if __name__ == '__main__':
     #Creates a multiprocessing object and runs it's loop
     process_queue = Queue()
     stop_event = Event()
+    task_done = Event()
+    task_start = Event()
     image_save.value = True
-    p = parkingProcess(process_queue, stop_event, image_save, image_raw, json_reload, state_dict_reload, db)
+    p = parkingProcess(process_queue, stop_event, task_start, task_done, image_save, image_raw, json_reload, state_dict_reload, db)
     p.start()
     try:
         web.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False) #Web server launch
