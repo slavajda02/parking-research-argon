@@ -8,6 +8,7 @@ import warnings
 from shapely import Polygon, box
 from rtree import index
 from shapely.ops import unary_union
+from datetime import datetime
 
 class parkingLot:
     """Class that loads a map and an AI model for a parking lot occupancy detection.
@@ -139,6 +140,7 @@ class parkingLot:
         
         for i, lot in enumerate(self.parking_spaces):
             lot["cords"] = lot["cords"].reshape((-1,1,2))
+            cv2.putText(image, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), (20,40), cv2.LINE_AA, 1.2, (255, 255, 255), 2)
             if lot["status"]:
                 cv2.putText(image, f"{i}", lot["cords"][0][0], cv2.LINE_AA, 1.2, (0,0,255), 2)
                 cv2.polylines(image, [lot["cords"]], isClosed = True, color = (0,0,255), thickness = 2)

@@ -16,3 +16,4 @@ rtree
 flask
 flask-wtf
 Flask-PyMongo
+plotly

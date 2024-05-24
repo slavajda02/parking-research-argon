@@ -6,6 +6,10 @@ from werkzeug.utils import secure_filename
 from app.process import *
 import queue
 from config import Config
+import plotly
+import json
+import plotly.express as px
+import pandas as pd
 
 ##Flask setup
 UPLOAD_FOLDER = 'uploads'
@@ -13,16 +17,24 @@ ALLOWED_EXTENSIONS = {'json', 'pth'}
 web = Flask(__name__)
 web.config.from_object(Config)
 web.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-web.config["MONGO_URI"] = "mongodb+srv://240648:GRziVfkVYYMGaQWa@t10lot.mzbydiy.mongodb.net/?retryWrites=true&w=majority&appName=T10LOT"
+web.config["MONGO_URI"] = "mongodb+srv://240648:GRziVfkVYYMGaQWa@t10lot.mzbydiy.mongodb.net/T10LOT?retryWrites=true&w=majority&appName=T10LOT"
 
 #Setup mongodb
 mongodb_client = PyMongo(web)
 db = mongodb_client.db
+collection = db['parking_data_testing']
 
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+#Gets all of the data so far and puts them in a list
+def fetch_database():
+    data = collection.find()
+    data_list = []
+    for item in data:
+        data_list.append(item)
+    return data_list
 
 #Empty global variable for multiprocessing object
 p = None
@@ -47,14 +59,39 @@ def show_parking():
             info = "Queue empty"
         if status:
             i = 0
+            unoccupied = []
             for lot in status:
                 if lot["status"]:
                     i+=1
-            flash(f"Request sucessful, {i} parking spaces occupied")
+                else:
+                    unoccupied.append(int(lot["name"])-1)
+            flash(f"{i} parking spaces occupied, closest free parking space is {min(unoccupied)}")
             return redirect('/')
-    flash(f"Request failed, no data {info}")
+    flash(f"Request failed, no new data or inference not running")
     return redirect('/')
 
+@web.route('/history')
+def show_graph():
+    ##Data extraction
+    data = fetch_database()
+    time = []
+    occupancy = []
+    for entry in data:
+        i = 0
+        timestamp = datetime.fromisoformat(entry["timestamp"].replace("Z", "+00:00"))
+        formatted_time = timestamp.strftime('%Y-%m-%d %H:%M')
+        time.append(formatted_time)
+        for lot in entry["parking_lot"]:
+            if lot["status"]:
+                i += 1
+        occupancy.append(i)
+    occupancy_df = pd.DataFrame({'Time' : time, 'Number of cars' : occupancy})
+    
+    ##Graph
+    fig = px.bar(occupancy_df, x='Time', y='Number of cars', title="Parking occupancy over time", template='plotly_dark')
+    graphJson = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    return render_template('history.html', graphJSON=graphJson)
+    
 @web.route('/upload', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
@@ -88,20 +125,25 @@ def upload_file():
     task_done.wait()
     return(render_template('upload.html'))
 
+#Developer tools age
+@web.route('/dev')
+def show_dev():
+    return(render_template('dev.html'))
+
 #Inference start withs the webserver, used only when manualy stopping and starting the inference
-@web.route('/parking/start')
+@web.route('/dev/start')
 def start_parking():
     global p
     if p is None or not p.is_alive():
-        p = parkingProcess(process_queue, stop_event)
+        p = parkingProcess(process_queue, stop_event, task_start, task_done, image_save, image_raw, json_reload, state_dict_reload, db)
         p.start()
         flash("Parking inference started")
     else:
         flash("Parking inference already running")
-    return redirect('/')
+    return redirect('/dev')
 
 #Unsafe, don't really recommend
-@web.route('/parking/stop')
+@web.route('/dev/stop')
 def stop_parking():
     global p
     if p is not None and p.is_alive():
@@ -112,17 +154,7 @@ def stop_parking():
         flash("Parking inference stopped")
     else:
         flash("Parking inference not running")
-    return redirect('/')
-
-@web.route('/parking/image')
-def show_image():
-    global p
-    if p is not None and p.is_alive():
-        flash("Image updated")
-    else:
-        flash("No inference running")
-    return redirect('/')
-
+    return redirect('/dev')
 
 ##Main
 if __name__ == '__main__':

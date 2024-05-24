@@ -22,3 +22,4 @@ dependencies:
   - flask-wtf
   - flask
   - flask-pymongo
+  - plotly

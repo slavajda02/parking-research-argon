@@ -3,7 +3,7 @@ from multiprocessing import Queue, Event, Process, Value
 import cv2
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from picamera2 import Picamera2
 
 ##Flag variables for communication between processes
@@ -29,7 +29,7 @@ class parkingProcess(Process):
         self.image_raw = image_raw
         self.json_reaload = json_reload
         self.state_dict_reload = state_dict_reload
-        #self.collection = db['parking_data_test']
+        self.collection = db['parking_data_testing']
     
     def run(self):
         ##DEBUG
@@ -41,6 +41,7 @@ class parkingProcess(Process):
         #images_names = image_names[100:]
         #timer = DELAY #First inference runs instantly
         
+        db_update_time = datetime.now() - timedelta(minutes=1) #So the first inference gets send
         picam2 = Picamera2()
         camera_config = picam2.create_still_configuration({"size" : (3200, 1800)})
         picam2.configure(camera_config)
@@ -58,15 +59,14 @@ class parkingProcess(Process):
             #Inference
             status_dict = self.parking.evaulate_occupancy(self.image)
             
-            ##Prepares data for database
-            #data_out = {"timestamp": datetime.now().isoformat(), "parking_lot": {}}
-            #for lot in status_dict:
-            #    lot.pop('polygons', None)
-            #    data_out["parking_lot"].append(lot)
-            #self.collection.insert_one(data_out)
-            
-            #Sends data to the webserver
+            #Make sure to send only up to date data
+            while not self.queue.empty():
+                try:
+                    self.queue.get_nowait()
+                except self.queue.Empty:
+                    continue
             self.queue.put(status_dict)
+            
             #Result image save
             if self.image_save.value:
                 try:
@@ -88,10 +88,25 @@ class parkingProcess(Process):
                 self.parking.load_model('uploads/state_dict_final.pth')
                 self.state_dict_reload.value = False
                 self.task_start.clear()
+            
+            if datetime.now() - db_update_time >= timedelta(minutes=1):
+                ##Prepares and sends data to database
+                data_out = {"timestamp": datetime.now(timezone.utc).isoformat(), "parking_lot": []}
+                for lot in status_dict:
+                    lot_copy = lot.copy()
+                    lot_copy.pop('polygons', None)
+                    # Convert numpy arrays to lists
+                    for key, value in lot_copy.items():
+                        if isinstance(value, np.ndarray):
+                            lot_copy[key] = value.tolist()
+                    data_out["parking_lot"].append(lot_copy)
+                self.collection.insert_one(data_out)            
+                db_update_time = datetime.now()
                 
             #Signaling that an inference loop was done
             if not self.task_start.is_set():
                 self.task_done.set()
+            
         
     #Stops the process, freezes if not called on p.join()
     def stop(self):
