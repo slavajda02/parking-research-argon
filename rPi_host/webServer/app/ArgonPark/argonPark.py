@@ -2,6 +2,8 @@ import numpy as np
 import torch
 import cv2
 import json
+import torch
+torch.backends.quantized.engine = 'qnnpack'
 from torchvision import transforms
 from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_fpn, faster_rcnn
 import warnings
@@ -9,6 +11,7 @@ from shapely import Polygon, box
 from rtree import index
 from shapely.ops import unary_union
 from datetime import datetime
+import time
 
 class parkingLot:
     """Class that loads a map and an AI model for a parking lot occupancy detection.
@@ -32,6 +35,7 @@ class parkingLot:
         in_features = self.model.roi_heads.box_predictor.cls_score.in_features
         self.model.roi_heads.box_predictor = faster_rcnn.FastRCNNPredictor(in_features, 2)
         self.load_model(path) #Loads a model from state dict
+        self.infertime = 0
         
     def reload_JSON(self, path):
         """Reloads the JSON map file for the parking lot.
@@ -82,6 +86,10 @@ class parkingLot:
             self.model.load_state_dict(torch.load(path))
             self.model.cuda()
         self.model.eval() # Sets model to evaluation mode since no training will be done
+        self.model = torch.jit.script(self.model)
+    
+    #({}, [{'boxes': tensor([], size=(0, 4)), 'labels': tensor([], dtype=torch.int64), 'scores': tensor([])}])
+    #[{'boxes': tensor([], size=(0, 4)), 'labels': tensor([], dtype=torch.int64), 'scores': tensor([])}]
     
     def make_pred(self, img, treshold = 0.9):
         """Makes a prediction on a single image in a batch.
@@ -100,7 +108,10 @@ class parkingLot:
         #Send image to device (would cause problem if it were missing on GPU)
         images = list(image.to(self.device) for image in img_batch)
         with torch.no_grad():
+            tic = time.time()
             pred = self.model(images)
+            pred = pred[1]
+            toc = time.time()
         pred_boxes = [[(x[0], x[1]), (x[2], x[3])] for x in list(pred[0]["boxes"].detach().cpu().numpy())]
         pred_class = list(pred[0]["labels"].detach().cpu().numpy())
         pred_score = list(pred[0]["scores"].detach().cpu().numpy())
@@ -111,6 +122,7 @@ class parkingLot:
             over_treshold = 0
         pred_boxes = pred_boxes[:over_treshold+1]
         pred_class = pred_class[:over_treshold+1]
+        self.infertime = toc-tic
         return pred_boxes, pred_score
     
     def resize_image(self, img):
@@ -141,6 +153,7 @@ class parkingLot:
         for i, lot in enumerate(self.parking_spaces):
             lot["cords"] = lot["cords"].reshape((-1,1,2))
             cv2.putText(image, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), (20,40), cv2.LINE_AA, 1.2, (255, 255, 255), 2)
+            cv2.putText(image, str(round(self.infertime, 2)) + " s", (20, 1080-40), cv2.LINE_AA, 1.2, (255, 255, 255), 2)
             if lot["status"]:
                 cv2.putText(image, f"{i}", lot["cords"][0][0], cv2.LINE_AA, 1.2, (0,0,255), 2)
                 cv2.polylines(image, [lot["cords"]], isClosed = True, color = (0,0,255), thickness = 2)
