@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}    
+    <h2>Developer tools</h2>
+    Buttons for starting and stopping inference. Do excercise caution. Starting and stopping the subprocess can cause issues and freeze the whole subprocess. Manual intervention is then needed!
+    <hr></hr>
+        <div class="row">
+            <div class="col">
+                <a type="button" class="btn btn-success" href="{{ url_for('start_parking') }}">Start inference</a>
+            </div>
+            <div class="col">
+                <a type="button" class="btn btn-danger" href="{{ url_for('stop_parking')}}">Stop inference</a>
+            </div>
+        </div>
+{% endblock %}

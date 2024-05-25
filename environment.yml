@@ -21,3 +21,5 @@ dependencies:
   - Rtree
   - flask-wtf
   - flask
+  - flask-pymongo
+  - plotly

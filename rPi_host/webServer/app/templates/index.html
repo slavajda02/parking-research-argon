@@ -1,0 +1,14 @@
+{% extends "base.html"%}
+
+{% block content %}
+    <img id="parkingImage" class="img-fluid" src="{{ url_for('static', filename='img/output.jpg') }}" alt="">
+{% endblock %}
+
+{% block js %}
+    <script>
+        setInterval(function() {
+            var d = new Date();
+            document.getElementById('parkingImage').src = "{{ url_for('static', filename='img/output.jpg') }}?ver=" + d.getTime();
+        }, 2000);
+    </script>
+{% endblock %}
