@@ -15,7 +15,8 @@ import time
 
 
 class parkingLot:
-    """Class that loads a map and an AI model for a parking lot occupancy detection.
+    """
+    Class that loads a map and an AI model for a parking lot occupancy detection.
     Contains decision algorithms for parking Lot occupancy.
     Takes images as inputs and returns occupancy status with images.
     """
@@ -39,7 +40,8 @@ class parkingLot:
         self.infertime = 0
         
     def reload_JSON(self, path):
-        """Reloads the JSON map file for the parking lot.
+        """
+        Reloads the JSON map file for the parking lot.
 
         Args:
             path (str): Path to the JSON file
@@ -58,7 +60,8 @@ class parkingLot:
             self.parking_spaces[i]["polygons"] = Polygon([(points[0][0],points[0][1]), (points[1][0],points[1][1]), (points[2][0],points[2][1]), (points[3][0],points[3][1])])
             
     def get_device(debug = False) -> torch.device:
-        """Gets device to be used for machine learning.
+        """
+        Gets device to be used for machine learning.
         
         Args:
             debug (bool, optional): Prints selected device. Defaults to False.
@@ -76,7 +79,8 @@ class parkingLot:
         return device
     
     def load_model(self, path):
-        """Loads a state dict onto a model.
+        """
+        Loads a state dict onto a model.
 
         Args:
             path (str): Path to the state dict
@@ -93,7 +97,8 @@ class parkingLot:
     #[{'boxes': tensor([], size=(0, 4)), 'labels': tensor([], dtype=torch.int64), 'scores': tensor([])}]
     
     def make_pred(self, img, treshold = 0.9):
-        """Makes a prediction on a single image in a batch.
+        """
+        Makes a prediction on a single image in a batch.
 
         Args:
             model (torch): Model to inference with
@@ -127,7 +132,8 @@ class parkingLot:
         return pred_boxes, pred_score
     
     def resize_image(self, img):
-        """Resizes an image to the desired size.
+        """
+        Resizes an image to the desired size.
 
         Args:
             img (np matrix): Image to resize
@@ -138,7 +144,8 @@ class parkingLot:
         return cv2.resize(img, (int(self.img_size[0]*self.img_scale), int(self.img_size[1]*self.img_scale)))
     
     def plot_to_image(self, debug = False):
-        """Draws polygons over parking places according to the active mapping and occupancy.
+        """
+        Draws polygons over parking places according to the active mapping and occupancy.
         Args:
             img (np matrix): A cv2 image to draw on.
             debug (bool, optional): If true, the function will save the image. Defaults to False.
@@ -166,7 +173,8 @@ class parkingLot:
         return image
     
     def show_inference(self, treshold = 0.9, debug = False):
-        """Shows the inference on an image, with marked parking slots. Goes through the whole inference process.
+        """
+        Shows the inference on an image, with marked parking slots. Goes through the whole inference process.
 
         Args:
             img (np matrix) Image ready by cv2
@@ -193,7 +201,8 @@ class parkingLot:
         return img
     
     def evaulate_occupancy(self, img, overlap = 0.8):
-        """Evaluates the occupancy of the parking lot.
+        """
+        Evaluates the occupancy of the parking lot.
 
         Args:
             img (np matrix): Image to evaluate
@@ -219,7 +228,8 @@ class parkingLot:
         return self.parking_spaces
     
     def calculate_iou(self, idx, boxes, area_treshold = 0.75):
-        """Calculates the intersection over union of a box and a polygon.
+        """
+        Calculates the intersection over union of a box and a polygon.
 
         Args:
             idx (rtree.index): Index of intersected boxes
