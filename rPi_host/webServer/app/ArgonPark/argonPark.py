@@ -13,6 +13,7 @@ from shapely.ops import unary_union
 from datetime import datetime
 import time
 
+
 class parkingLot:
     """Class that loads a map and an AI model for a parking lot occupancy detection.
     Contains decision algorithms for parking Lot occupancy.

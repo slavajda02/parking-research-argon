@@ -1,10 +1,9 @@
-from app.ArgonPark.argonPark import *
+import app
 from multiprocessing import Queue, Event, Process, Value
-import cv2
-import os
-import time
 from datetime import datetime, timezone, timedelta
+import cv2
 from picamera2 import Picamera2
+import numpy as np
 
 ##Flag variables for communication between processes
 image_save = Value('b', False) #Updates image each iteration
@@ -24,7 +23,7 @@ class parkingProcess(Process):
         self.stop_event = stop_event
         self.task_done = task_done
         self.task_start = task_start
-        self.parking = parkingLot('uploads/map.json', 'uploads/state_dict_final.pth')
+        self.parking = app.parkingLot('uploads/map.json', 'uploads/state_dict_final.pth')
         self.image_save = image_save
         self.image_raw = image_raw
         self.json_reaload = json_reload
@@ -70,12 +69,12 @@ class parkingProcess(Process):
             #Result image save
             if self.image_save.value:
                 try:
-                    cv2.imwrite('static/img/output.jpg', self.parking.plot_to_image())
+                    cv2.imwrite('app/static/img/output.jpg', self.parking.plot_to_image())
                 except AttributeError:
                     print("No image yet loaded, run inference first")
             #Raw image save
             if self.image_raw.value:
-                cv2.imwrite('static/img/raw.jpg', self.raw)
+                cv2.imwrite('app/static/img/raw.jpg', self.raw)
                 self.image_raw.value = False
                 self.task_start.clear()
             #Reloads the map json
