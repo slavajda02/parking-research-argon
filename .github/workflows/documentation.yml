@@ -17,7 +17,7 @@ jobs:
           pip install -r requirements.txt
       - name: Sphinx build
         run: |
-          sphinx-apidoc . ./rPi_Host/webServer 
+          sphinx-apidoc -o . ./rPi_Host/webServer 
           sphinx-build doc _build
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
