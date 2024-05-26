@@ -17,15 +17,6 @@ jobs:
           pip install -r requirements.txt
       - name: Sphinx build
         run: |
-<<<<<<< HEAD
-<<<<<<< HEAD
-          sphinx-apidoc -o . rPi_host/webServer 
-=======
-          sphinx-apidoc . ./rPi_Host/webServer 
->>>>>>> parent of 529f0eb (apidoc now in github actions)
-=======
-          sphinx-apidoc -o . ./rPi_Host/webServer 
->>>>>>> parent of 59e6c14 (Syncing python env for github actions)
           sphinx-build doc _build
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
