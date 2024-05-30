@@ -69,7 +69,10 @@ def show_graph():
     occupancy_df = pd.DataFrame({'Time' : time, 'Number of cars' : occupancy})
     
     ##Graph
-    fig = px.bar(occupancy_df, x='Time', y='Number of cars', title="Parking occupancy over time", template='plotly_dark')
+    fig = px.histogram(occupancy_df, x='Time', y='Number of cars', title="Parking occupancy over time", template='plotly_dark', nbins=100000)
+    fig.update_layout(bargap=0.2)
+    
+    #fig.update_layout(xaxis=dict(range=[occupancy_df.index[occupancy_df.shape(0)-1440], occupancy_df.index[occupancy_df.shape(0)]]))
     graphJson = json.dumps(fig, cls=PlotlyJSONEncoder)
     return render_template('history.html', graphJSON=graphJson)
     
